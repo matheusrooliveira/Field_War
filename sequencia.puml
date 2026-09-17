@@ -1,0 +1,97 @@
+@startuml
+title Diagrama de Sequência - FIELD WAR
+
+actor Jogador
+participant "main.py" as Main
+participant "Menu" as Menu
+participant "Player" as Player
+participant "Bullet" as Bullet
+participant "Enemy" as Enemy
+participant "Pygame" as Pygame
+
+Main -> Pygame : pygame.init()
+Main -> Pygame : criar janela
+Main -> Menu : menu(tela, clock)
+
+Menu --> Main : jogar
+
+alt Jogador escolheu Jogar
+
+    Main -> Player : reiniciar_jogo()
+    activate Player
+    Player --> Main : jogador
+    deactivate Player
+
+    loop Enquanto rodando
+
+        Main -> Pygame : pygame.event.get()
+        Pygame --> Main : eventos
+
+        alt Tecla ESPAÇO pressionada
+            Main -> Bullet : Bullet(x, y)
+            Bullet --> Main : novo_tiro
+        end
+
+        alt Tecla R e game_over
+            Main -> Player : reiniciar_jogo()
+            Player --> Main : novo jogador
+        end
+
+        alt Jogo ativo
+
+            Main -> Player : mover()
+            Player --> Main
+
+            loop Para cada tiro
+                Main -> Bullet : mover()
+            end
+
+            alt tempo_inimigo >= 50
+                Main -> Enemy : criar_inimigo()
+                Enemy --> Main : inimigo
+            end
+
+            loop Para cada inimigo
+                Main -> Enemy : mover()
+                Enemy --> Main
+            end
+
+            alt Tiro colide com inimigo
+                Main -> Bullet : verificar rect
+                Main -> Enemy : verificar rect
+                Main -> Main : remover tiro
+                Main -> Main : remover inimigo
+                Main -> Main : pontuacao += 10
+            end
+
+            alt Jogador colide com inimigo
+                Main -> Player : verificar rect
+                Main -> Enemy : verificar rect
+                Main -> Main : vidas -= 1
+
+                alt vidas <= 0
+                    Main -> Main : game_over = True
+                end
+            end
+
+        end
+
+        Main -> Player : desenhar(tela)
+
+        loop Para cada tiro
+            Main -> Bullet : desenhar(tela)
+        end
+
+        loop Para cada inimigo
+            Main -> Enemy : desenhar(tela)
+        end
+
+        Main -> Pygame : pygame.display.flip()
+
+    end
+
+end
+
+Main -> Pygame : pygame.quit()
+
+@enduml
