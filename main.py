@@ -6,6 +6,7 @@ from menu import menu
 from player import Player
 from enemy import Enemy
 from bullet import Bullet
+from boss import Boss
 
 
 # =========================================
@@ -38,6 +39,7 @@ clock = pygame.time.Clock()
 PRETO = (5, 5, 20)
 BRANCO = (255, 255, 255)
 VERMELHO = (255, 50, 50)
+VERDE = (50, 255, 100)
 
 
 # =========================================
@@ -124,16 +126,28 @@ def reiniciar_jogo():
 
     tiros = []
 
+    bolhas = []
+
+    boss = None
+
     pontuacao = 0
 
-    vidas = 3
+    vidas = 7
+
+    boss_ativado = False
+
+    vitoria = False
 
     return (
         jogador,
         inimigos,
         tiros,
+        bolhas,
+        boss,
         pontuacao,
-        vidas
+        vidas,
+        boss_ativado,
+        vitoria
     )
 
 
@@ -153,7 +167,17 @@ jogar = menu(
 
 if jogar:
 
-    jogador, inimigos, tiros, pontuacao, vidas = reiniciar_jogo()
+    (
+        jogador,
+        inimigos,
+        tiros,
+        bolhas,
+        boss,
+        pontuacao,
+        vidas,
+        boss_ativado,
+        vitoria
+    ) = reiniciar_jogo()
 
     tempo_inimigo = 0
 
@@ -188,7 +212,7 @@ if jogar:
                 # Atirar
                 if evento.key == pygame.K_SPACE:
 
-                    if not game_over:
+                    if not game_over and not vitoria:
 
                         novo_tiro = Bullet(
                             jogador.x +
@@ -203,14 +227,18 @@ if jogar:
                 # Reiniciar
                 if evento.key == pygame.K_r:
 
-                    if game_over:
+                    if game_over or vitoria:
 
                         (
                             jogador,
                             inimigos,
                             tiros,
+                            bolhas,
+                            boss,
                             pontuacao,
-                            vidas
+                            vidas,
+                            boss_ativado,
+                            vitoria
                         ) = reiniciar_jogo()
 
                         game_over = False
@@ -219,7 +247,7 @@ if jogar:
         # GAMEPLAY
         # =================================
 
-        if not game_over:
+        if not game_over and not vitoria:
 
             # -----------------------------
             # JOGADOR
@@ -237,23 +265,41 @@ if jogar:
 
                 if tiro.y < 0:
 
-                    tiros.remove(
-                        tiro
-                    )
+                    if tiro in tiros:
+                        tiros.remove(tiro)
 
             # -----------------------------
-            # CRIAR INIMIGOS
+            # ATIVAR BOSS
             # -----------------------------
 
-            tempo_inimigo += 1
+            if pontuacao >= 100 and not boss_ativado:
 
-            if tempo_inimigo >= 50:
-
-                inimigos.append(
-                    criar_inimigo()
+                boss = Boss(
+                    LARGURA,
+                    ALTURA,
+                    jogador
                 )
 
-                tempo_inimigo = 0
+                boss_ativado = True
+
+                # Remove os inimigos normais
+                inimigos.clear()
+
+            # -----------------------------
+            # CRIAR INIMIGOS NORMAIS
+            # -----------------------------
+
+            if not boss_ativado:
+
+                tempo_inimigo += 1
+
+                if tempo_inimigo >= 50:
+
+                    inimigos.append(
+                        criar_inimigo()
+                    )
+
+                    tempo_inimigo = 0
 
             # -----------------------------
             # MOVIMENTAR INIMIGOS
@@ -266,9 +312,11 @@ if jogar:
                 # Inimigo passou pela tela
                 if inimigo.y > ALTURA:
 
-                    inimigos.remove(
-                        inimigo
-                    )
+                    if inimigo in inimigos:
+
+                        inimigos.remove(
+                            inimigo
+                        )
 
                     vidas -= 1
 
@@ -314,15 +362,140 @@ if jogar:
                     inimigo.rect
                 ):
 
-                    inimigos.remove(
-                        inimigo
-                    )
+                    if inimigo in inimigos:
+
+                        inimigos.remove(
+                            inimigo
+                        )
 
                     vidas -= 1
 
                     if vidas <= 0:
 
                         game_over = True
+
+            # =================================
+            # BOSS
+            # =================================
+
+            if boss_ativado and boss is not None:
+
+                # -----------------------------
+                # MOVIMENTAR BOSS
+                # -----------------------------
+
+                boss.mover(
+                    bolhas
+                )
+
+                # -----------------------------
+                # TIRO X ESCUDO DO BOSS
+                # -----------------------------
+
+                for tiro in tiros[:]:
+
+                    if boss.tiro_bateu_no_escudo(
+                        tiro
+                    ):
+
+                        if tiro in tiros:
+
+                            tiros.remove(
+                                tiro
+                            )
+
+                # -----------------------------
+                # TIRO X BOSS
+                # -----------------------------
+
+                for tiro in tiros[:]:
+
+                    if tiro.rect.colliderect(
+                        boss.rect
+                    ):
+
+                        # O tiro desaparece
+                        if tiro in tiros:
+
+                            tiros.remove(
+                                tiro
+                            )
+
+                        # Boss recebe dano
+                        boss.vida -= 1
+
+                        # Boss derrotado
+                        if boss.vida <= 0:
+
+                            boss.vida = 0
+
+                            boss = None
+
+                            vitoria = True
+
+                            break
+
+                # -----------------------------
+                # BOLHAS DO BOSS
+                # -----------------------------
+
+                for bolha in bolhas[:]:
+
+                    bolha.mover()
+
+                    # Bolha saiu da tela
+                    if bolha.fora_da_tela(
+                        LARGURA,
+                        ALTURA
+                    ):
+
+                        if bolha in bolhas:
+
+                            bolhas.remove(
+                                bolha
+                            )
+
+                        continue
+
+                    # Bolha atingiu jogador
+                    if bolha.rect.colliderect(
+                        jogador.rect
+                    ):
+
+                        if bolha in bolhas:
+
+                            bolhas.remove(
+                                bolha
+                            )
+
+                        vidas -= 1
+
+                        if vidas <= 0:
+
+                            game_over = True
+
+                # -----------------------------
+                # BOSS X JOGADOR
+                # -----------------------------
+
+                if boss is not None:
+
+                    if jogador.rect.colliderect(
+                        boss.rect
+                    ):
+
+                        vidas -= 1
+
+                        # Afasta o jogador
+                        jogador.x -= 30
+
+                        if jogador.x < 0:
+
+                            jogador.x = 0
+
+                        if vidas <= 0:
+
+                            game_over = True
 
         # =================================
         # DESENHAR FUNDO
@@ -388,6 +561,26 @@ if jogar:
             )
 
         # =================================
+        # DESENHAR BOLHAS
+        # =================================
+
+        for bolha in bolhas:
+
+            bolha.desenhar(
+                tela
+            )
+
+        # =================================
+        # DESENHAR BOSS
+        # =================================
+
+        if boss is not None:
+
+            boss.desenhar(
+                tela
+            )
+
+        # =================================
         # INTERFACE
         # =================================
 
@@ -427,6 +620,42 @@ if jogar:
 
             texto_reiniciar = fonte.render(
                 "Pressione R para reiniciar",
+                True,
+                BRANCO
+            )
+
+            tela.blit(
+                texto,
+                (
+                    LARGURA // 2 -
+                    texto.get_width() // 2,
+                    240
+                )
+            )
+
+            tela.blit(
+                texto_reiniciar,
+                (
+                    LARGURA // 2 -
+                    texto_reiniciar.get_width() // 2,
+                    330
+                )
+            )
+
+        # =================================
+        # VITÓRIA
+        # =================================
+
+        if vitoria:
+
+            texto = fonte_game_over.render(
+                "VOCÊ VENCEU!",
+                True,
+                VERDE
+            )
+
+            texto_reiniciar = fonte.render(
+                "Pressione R para jogar novamente",
                 True,
                 BRANCO
             )
