@@ -72,9 +72,13 @@ Developed as an academic team project, FieldWar applies programming and software
 Field_War/
 │
 ├── assents/
-│   └── banner-fieldwar.png
+│   ├── banner-fieldwar.png
+│   ├── boss.png
+│   ├── nave_inimiga.png
+│   └── nave.png
 │
 ├── sistemas/
+│   ├── __init__.py
 │   ├── login.py
 │   ├── ranking.py
 │   └── timer.py
