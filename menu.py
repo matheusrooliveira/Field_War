@@ -1,5 +1,8 @@
+
 import pygame
 import random
+
+from sistemas.ranking import obter_ranking
 
 
 # -----------------------------------------
@@ -14,6 +17,239 @@ BRANCO = (255, 255, 255)
 
 
 # -----------------------------------------
+# TELA DE RANKING
+# -----------------------------------------
+
+def tela_ranking(tela, clock):
+
+    LARGURA = 1000
+    ALTURA = 600
+
+    fonte_titulo = pygame.font.Font(None, 75)
+    fonte_texto = pygame.font.Font(None, 38)
+    fonte_pequena = pygame.font.Font(None, 28)
+
+    rodando = True
+
+    while rodando:
+
+        clock.tick(60)
+
+        mouse = pygame.mouse.get_pos()
+
+        botao_voltar = pygame.Rect(
+            350, 515, 300, 55
+        )
+
+        for evento in pygame.event.get():
+
+            if evento.type == pygame.QUIT:
+                return False
+
+            if evento.type == pygame.KEYDOWN:
+
+                if evento.key == pygame.K_ESCAPE:
+                    return True
+
+            if evento.type == pygame.MOUSEBUTTONDOWN:
+
+                if botao_voltar.collidepoint(evento.pos):
+                    return True
+
+        # -----------------------------------------
+        # FUNDO
+        # -----------------------------------------
+
+        tela.fill(PRETO)
+
+        for _ in range(80):
+
+            x = random.randint(0, LARGURA)
+            y = random.randint(0, ALTURA)
+
+            pygame.draw.circle(
+                tela,
+                (70, 70, 90),
+                (x, y),
+                1
+            )
+
+        # -----------------------------------------
+        # TÍTULO
+        # -----------------------------------------
+
+        titulo = fonte_titulo.render(
+            "RANKING",
+            True,
+            VERMELHO
+        )
+
+        tela.blit(
+            titulo,
+            titulo.get_rect(
+                center=(LARGURA // 2, 80)
+            )
+        )
+
+        # -----------------------------------------
+        # CABEÇALHO
+        # -----------------------------------------
+
+        cabecalho = fonte_pequena.render(
+            "POSICAO       JOGADOR       PONTOS       TEMPO",
+            True,
+            AMARELO
+        )
+
+        tela.blit(cabecalho, (180, 145))
+
+        pygame.draw.line(
+            tela,
+            VERMELHO,
+            (150, 180),
+            (850, 180),
+            2
+        )
+
+        # -----------------------------------------
+        # DADOS DO RANKING
+        # -----------------------------------------
+
+        ranking = obter_ranking()
+
+        if not ranking:
+
+            mensagem = fonte_texto.render(
+                "Ainda nao existem recordes!",
+                True,
+                BRANCO
+            )
+
+            tela.blit(
+                mensagem,
+                mensagem.get_rect(
+                    center=(500, 300)
+                )
+            )
+
+        else:
+
+            for posicao, jogador in enumerate(
+                ranking, start=1
+            ):
+
+                login = jogador[0]
+                pontuacao = jogador[1]
+                tempo_gasto = jogador[2]
+
+                # Converter segundos para minutos
+                minutos = tempo_gasto // 60
+                segundos = tempo_gasto % 60
+
+                tempo_formatado = (
+                    f"{minutos:02d}:{segundos:02d}"
+                )
+
+                y = 195 + (posicao - 1) * 30
+
+                cor = (
+                    AMARELO
+                    if posicao == 1
+                    else BRANCO
+                )
+
+                texto_posicao = fonte_pequena.render(
+                    f"{posicao}º",
+                    True,
+                    cor
+                )
+
+                texto_login = fonte_pequena.render(
+                    str(login),
+                    True,
+                    BRANCO
+                )
+
+                texto_pontuacao = fonte_pequena.render(
+                    str(pontuacao),
+                    True,
+                    AMARELO
+                )
+
+                texto_tempo = fonte_pequena.render(
+                    tempo_formatado,
+                    True,
+                    BRANCO
+                )
+
+                tela.blit(
+                    texto_posicao,
+                    (200, y)
+                )
+
+                tela.blit(
+                    texto_login,
+                    (310, y)
+                )
+
+                tela.blit(
+                    texto_pontuacao,
+                    (570, y)
+                )
+
+                tela.blit(
+                    texto_tempo,
+                    (750, y)
+                )
+
+        # -----------------------------------------
+        # BOTÃO VOLTAR
+        # -----------------------------------------
+
+        if botao_voltar.collidepoint(mouse):
+
+            cor = (180, 35, 30)
+            borda = (255, 180, 60)
+
+        else:
+
+            cor = (80, 20, 25)
+            borda = (160, 50, 40)
+
+        pygame.draw.rect(
+            tela,
+            cor,
+            botao_voltar,
+            border_radius=10
+        )
+
+        pygame.draw.rect(
+            tela,
+            borda,
+            botao_voltar,
+            3,
+            border_radius=10
+        )
+
+        texto_voltar = fonte_pequena.render(
+            "VOLTAR",
+            True,
+            BRANCO
+        )
+
+        tela.blit(
+            texto_voltar,
+            texto_voltar.get_rect(
+                center=botao_voltar.center
+            )
+        )
+
+        pygame.display.flip()
+
+    return True
+
+
+# -----------------------------------------
 # FUNÇÃO DO MENU
 # -----------------------------------------
 
@@ -22,7 +258,6 @@ def menu(tela, clock):
     LARGURA = 1000
     ALTURA = 600
 
-    # Fontes
     fonte_titulo = pygame.font.Font(None, 100)
     fonte_botao = pygame.font.Font(None, 50)
     fonte_pequena = pygame.font.Font(None, 28)
@@ -84,14 +319,12 @@ def menu(tela, clock):
         x = foguete["x"]
         y = foguete["y"]
 
-        # Corpo
         pygame.draw.ellipse(
             tela,
             (180, 180, 190),
             (x, y, 35, 12)
         )
 
-        # Ponta
         pygame.draw.polygon(
             tela,
             BRANCO,
@@ -102,7 +335,6 @@ def menu(tela, clock):
             ]
         )
 
-        # Fogo
         pygame.draw.polygon(
             tela,
             LARANJA,
@@ -158,7 +390,14 @@ def menu(tela, clock):
     # BOTÃO
     # -----------------------------------------
 
-    def desenhar_botao(texto, x, y, largura, altura, mouse):
+    def desenhar_botao(
+        texto,
+        x,
+        y,
+        largura,
+        altura,
+        mouse
+    ):
 
         rect = pygame.Rect(
             x,
@@ -239,6 +478,17 @@ def menu(tela, clock):
                 if botao_jogar.collidepoint(evento.pos):
 
                     return True
+
+                # RANKING
+                if botao_ranking.collidepoint(evento.pos):
+
+                    continuar = tela_ranking(
+                        tela,
+                        clock
+                    )
+
+                    if not continuar:
+                        return False
 
                 # SAIR
                 if botao_sair.collidepoint(evento.pos):
@@ -347,7 +597,7 @@ def menu(tela, clock):
         )
 
         titulo_rect = titulo.get_rect(
-            center=(LARGURA // 2, 150)
+            center=(LARGURA // 2, 120)
         )
 
         tela.blit(
@@ -374,7 +624,7 @@ def menu(tela, clock):
         )
 
         subtitulo_rect = subtitulo.get_rect(
-            center=(LARGURA // 2, 220)
+            center=(LARGURA // 2, 185)
         )
 
         tela.blit(
@@ -389,18 +639,27 @@ def menu(tela, clock):
         botao_jogar = desenhar_botao(
             "JOGAR",
             350,
+            250,
             300,
+            60,
+            mouse
+        )
+
+        botao_ranking = desenhar_botao(
+            "RANKING",
+            350,
+            330,
             300,
-            65,
+            60,
             mouse
         )
 
         botao_sair = desenhar_botao(
             "SAIR",
             350,
-            390,
+            410,
             300,
-            65,
+            60,
             mouse
         )
 

@@ -1,6 +1,8 @@
+
 import pygame
 import sys
 import random
+import traceback
 
 from menu import menu
 from player import Player
@@ -9,11 +11,20 @@ from bullet import Bullet
 from boss import Boss
 from powerup import PowerUp
 
-pygame.init()
+from sistemas.login import TelaLogin
+from sistemas.ranking import (
+    inicializar_banco,
+    registrar_jogador,
+    salvar_recorde
+)
+from sistemas.timer import Timer
+
 
 # =========================================
-# CONFIGURAÇÕES
+# INICIALIZAÇÃO
 # =========================================
+
+pygame.init()
 
 LARGURA = 1000
 ALTURA = 600
@@ -23,10 +34,6 @@ pygame.display.set_caption("FIELD WAR")
 
 clock = pygame.time.Clock()
 
-# =========================================
-# CORES
-# =========================================
-
 PRETO = (5, 5, 20)
 BRANCO = (255, 255, 255)
 VERMELHO = (255, 50, 50)
@@ -34,41 +41,64 @@ VERDE = (50, 255, 100)
 CIANO = (0, 220, 255)
 ROXO = (190, 80, 255)
 
-# =========================================
-# FONTES
-# =========================================
-
 fonte = pygame.font.Font(None, 36)
 fonte_game_over = pygame.font.Font(None, 70)
 
-# =========================================
-# ESTRELAS DO JOGO
-# =========================================
-
-estrelas = []
-
-for i in range(80):
-    x = random.randint(0, LARGURA)
-    y = random.randint(0, ALTURA)
-    tamanho = random.randint(1, 3)
-    estrelas.append([x, y, tamanho])
-
 
 # =========================================
-# CRIAR INIMIGO
+# LOGIN
+# =========================================
+
+def realizar_login():
+
+    login_tela = TelaLogin()
+
+    fonte_titulo = pygame.font.Font(None, 60)
+    fonte_texto = pygame.font.Font(None, 36)
+
+    while True:
+
+        for evento in pygame.event.get():
+
+            if evento.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+            resultado = login_tela.processar_evento(evento)
+
+            if resultado:
+                return resultado
+
+        tela.fill(PRETO)
+
+        login_tela.desenhar(
+            tela,
+            fonte_titulo,
+            fonte_texto
+        )
+
+        pygame.display.flip()
+        clock.tick(60)
+
+
+# =========================================
+# INIMIGOS
 # =========================================
 
 def criar_inimigo():
+
     x = random.randint(20, LARGURA - 60)
     y = random.randint(-100, -40)
+
     return Enemy(x, y)
 
 
 # =========================================
-# REINICIAR JOGO
+# REINICIAR PARTIDA
 # =========================================
 
 def reiniciar_jogo():
+
     jogador = Player(
         LARGURA // 2 - 25,
         ALTURA - 80,
@@ -76,133 +106,281 @@ def reiniciar_jogo():
         ALTURA
     )
 
-    inimigos = []
-    tiros = []
-    bolhas = []
-    powerups = []
+    return {
+        "jogador": jogador,
+        "inimigos": [],
+        "tiros": [],
+        "bolhas": [],
+        "powerups": [],
+        "boss": None,
+        "pontuacao": 0,
+        "vidas": 10,
+        "boss_ativado": False,
+        "game_over": False,
+        "vitoria": False,
+        "tempo_esgotado": False,
+        "tempo_inimigo": 0,
+        "recorde_salvo": False
+    }
 
-    boss = None
-    pontuacao = 0
-    vidas = 7
-    boss_ativado = False
-    vitoria = False
 
-    return (
-        jogador,
-        inimigos,
-        tiros,
-        bolhas,
-        powerups,
-        boss,
-        pontuacao,
-        vidas,
-        boss_ativado,
-        vitoria
+# =========================================
+# DESENHAR HUD
+# =========================================
+
+def desenhar_hud(estado, timer):
+
+    jogador = estado["jogador"]
+
+    texto_pontos = fonte.render(
+        f"Pontuação: {estado['pontuacao']}",
+        True,
+        BRANCO
+    )
+
+    texto_vidas = fonte.render(
+        f"Vidas: {estado['vidas']}",
+        True,
+        BRANCO
+    )
+
+    texto_timer = fonte.render(
+        f"Tempo: {timer.formatar()}",
+        True,
+        BRANCO
+    )
+
+    # Pontuação no canto superior esquerdo
+    tela.blit(texto_pontos, (20, 20))
+
+    # Vidas no canto superior direito
+    tela.blit(
+        texto_vidas,
+        (
+            LARGURA - texto_vidas.get_width() - 20,
+            20
+        )
+    )
+
+    # Timer logo abaixo das vidas
+    tela.blit(
+        texto_timer,
+        (
+            LARGURA - texto_timer.get_width() - 20,
+            60
+        )
+    )
+
+    # Power-ups ativos
+    if jogador.tiro_duplo_ativo:
+
+        texto = fonte.render(
+            "TIRO DUPLO",
+            True,
+            CIANO
+        )
+
+        tela.blit(texto, (20, 60))
+
+    if jogador.escudo_ativo:
+
+        texto = fonte.render(
+            "ESCUDO ATIVO",
+            True,
+            ROXO
+        )
+
+        tela.blit(texto, (20, 100))
+
+
+# =========================================
+# DESENHAR RESULTADO
+# =========================================
+
+def desenhar_resultado(estado):
+
+    if estado["game_over"]:
+
+        titulo = "GAME OVER"
+        cor = VERMELHO
+
+    elif estado["vitoria"]:
+
+        titulo = "VOCE VENCEU!"
+        cor = VERDE
+
+    elif estado["tempo_esgotado"]:
+
+        titulo = "TEMPO ESGOTADO"
+        cor = VERMELHO
+
+    else:
+        return
+
+    texto = fonte_game_over.render(
+        titulo,
+        True,
+        cor
+    )
+
+    reiniciar = fonte.render(
+        "Pressione R para jogar novamente",
+        True,
+        BRANCO
+    )
+
+    tela.blit(
+        texto,
+        (
+            LARGURA // 2 - texto.get_width() // 2,
+            240
+        )
+    )
+
+    tela.blit(
+        reiniciar,
+        (
+            LARGURA // 2 - reiniciar.get_width() // 2,
+            330
+        )
     )
 
 
 # =========================================
-# ABRIR MENU
+# SALVAR RESULTADO
 # =========================================
 
-jogar = menu(tela, clock)
+def salvar_resultado(estado, login, timer):
 
-if jogar:
+    if estado["recorde_salvo"]:
+        return
 
-    (
-        jogador,
-        inimigos,
-        tiros,
-        bolhas,
-        powerups,
-        boss,
-        pontuacao,
-        vidas,
-        boss_ativado,
-        vitoria
-    ) = reiniciar_jogo()
+    if estado["vitoria"]:
+        resultado = "vitoria"
 
-    tempo_inimigo = 0
-    game_over = False
+    elif estado["game_over"]:
+        resultado = "game_over"
+
+    else:
+        resultado = "tempo_esgotado"
+
+    tempo_gasto = 300 - timer.tempo_restante()
+
+    salvar_recorde(
+        login,
+        estado["pontuacao"],
+        resultado,
+        tempo_gasto
+    )
+
+    estado["recorde_salvo"] = True
+
+
+# =========================================
+# EXECUTAR PARTIDA
+# =========================================
+
+def executar_jogo(login):
+
+    estado = reiniciar_jogo()
+
+    timer = Timer(300)
+    timer.iniciar()
+
+    estrelas = []
+
+    for _ in range(80):
+
+        estrelas.append([
+            random.randint(0, LARGURA),
+            random.randint(0, ALTURA),
+            random.randint(1, 3)
+        ])
+
     rodando = True
-
-    # =====================================
-    # LOOP DO JOGO
-    # =====================================
 
     while rodando:
 
         clock.tick(60)
 
-        # =================================
+        # =====================================
         # EVENTOS
-        # =================================
+        # =====================================
 
         for evento in pygame.event.get():
 
             if evento.type == pygame.QUIT:
-                rodando = False
+                return False
 
             if evento.type == pygame.KEYDOWN:
 
-                # -----------------------------
-                # ATIRAR
-                # -----------------------------
-
                 if evento.key == pygame.K_SPACE:
 
-                    if not game_over and not vitoria:
+                    if not (
+                        estado["game_over"]
+                        or estado["vitoria"]
+                        or estado["tempo_esgotado"]
+                    ):
+
+                        jogador = estado["jogador"]
 
                         if jogador.tiro_duplo_ativo:
+
                             posicoes = [
                                 jogador.x + jogador.largura // 2 - 12,
                                 jogador.x + jogador.largura // 2 + 6
                             ]
+
                         else:
+
                             posicoes = [
                                 jogador.x + jogador.largura // 2 - 3
                             ]
 
                         for x_tiro in posicoes:
-                            novo_tiro = Bullet(
-                                x_tiro,
-                                jogador.y
-                            )
-                            tiros.append(novo_tiro)
 
-                # -----------------------------
-                # REINICIAR
-                # -----------------------------
+                            estado["tiros"].append(
+                                Bullet(x_tiro, jogador.y)
+                            )
 
                 if evento.key == pygame.K_r:
 
-                    if game_over or vitoria:
+                    if (
+                        estado["game_over"]
+                        or estado["vitoria"]
+                        or estado["tempo_esgotado"]
+                    ):
 
-                        (
-                            jogador,
-                            inimigos,
-                            tiros,
-                            bolhas,
-                            powerups,
-                            boss,
-                            pontuacao,
-                            vidas,
-                            boss_ativado,
-                            vitoria
-                        ) = reiniciar_jogo()
+                        estado = reiniciar_jogo()
+                        timer.reiniciar()
 
-                        tempo_inimigo = 0
-                        game_over = False
+                if evento.key == pygame.K_ESCAPE:
+                    return False
 
-        # =================================
+        # =====================================
+        # TIMER
+        # =====================================
+
+        if not (
+            estado["game_over"]
+            or estado["vitoria"]
+            or estado["tempo_esgotado"]
+        ):
+
+            if timer.acabou():
+                estado["tempo_esgotado"] = True
+
+        # =====================================
         # GAMEPLAY
-        # =================================
+        # =====================================
 
-        if not game_over and not vitoria:
+        if not (
+            estado["game_over"]
+            or estado["vitoria"]
+            or estado["tempo_esgotado"]
+        ):
 
-            # -----------------------------
-            # JOGADOR
-            # -----------------------------
+            jogador = estado["jogador"]
 
             jogador.mover()
 
@@ -210,101 +388,122 @@ if jogar:
             # POWER-UPS
             # -----------------------------
 
-            for item in powerups[:]:
+            for item in estado["powerups"][:]:
 
                 item.mover()
 
-                # Remover itens que saíram da tela
                 if item.rect.top > ALTURA:
-                    powerups.remove(item)
+
+                    estado["powerups"].remove(item)
                     continue
 
-                # Recolher power-up
                 if jogador.rect.colliderect(item.rect):
 
                     if item.tipo == "vida":
-                        vidas = min(vidas + 1, 7)
+
+                        estado["vidas"] = min(
+                            estado["vidas"] + 1,
+                            10
+                        )
 
                     elif item.tipo == "tiro_duplo":
+
                         jogador.ativar_powerup("tiro_duplo")
 
                     elif item.tipo == "escudo":
+
                         jogador.ativar_powerup("escudo")
 
-                    powerups.remove(item)
+                    estado["powerups"].remove(item)
 
             # -----------------------------
-            # MOVIMENTAR TIROS
+            # TIROS
             # -----------------------------
 
-            for tiro in tiros[:]:
+            for tiro in estado["tiros"][:]:
 
                 tiro.mover()
 
                 if tiro.y < 0:
-                    tiros.remove(tiro)
+                    estado["tiros"].remove(tiro)
 
             # -----------------------------
-            # ATIVAR BOSS
+            # BOSS AOS 100 PONTOS
             # -----------------------------
 
-            if pontuacao >= 100 and not boss_ativado:
+            if (
+                estado["pontuacao"] >= 100
+                and not estado["boss_ativado"]
+            ):
 
-                boss = Boss(LARGURA, ALTURA, jogador)
-                boss_ativado = True
+                print("Preparando boss...")
 
-                inimigos.clear()
+                estado["boss"] = Boss(
+                    LARGURA,
+                    ALTURA,
+                    jogador
+                )
+
+                estado["boss_ativado"] = True
+                estado["inimigos"].clear()
+
+                print("BOSS DESBLOQUEADO!")
 
             # -----------------------------
             # CRIAR INIMIGOS
             # -----------------------------
 
-            if not boss_ativado:
+            if not estado["boss_ativado"]:
 
-                tempo_inimigo += 1
+                estado["tempo_inimigo"] += 1
 
-                if tempo_inimigo >= 50:
-                    inimigos.append(criar_inimigo())
-                    tempo_inimigo = 0
+                if estado["tempo_inimigo"] >= 50:
+
+                    estado["inimigos"].append(
+                        criar_inimigo()
+                    )
+
+                    estado["tempo_inimigo"] = 0
 
             # -----------------------------
             # MOVIMENTAR INIMIGOS
             # -----------------------------
 
-            for inimigo in inimigos[:]:
+            for inimigo in estado["inimigos"][:]:
 
                 inimigo.mover()
 
                 if inimigo.y > ALTURA:
 
-                    inimigos.remove(inimigo)
-                    vidas -= 1
+                    estado["inimigos"].remove(inimigo)
+                    estado["vidas"] -= 1
 
-                    if vidas <= 0:
-                        vidas = 0
-                        game_over = True
+                    if estado["vidas"] <= 0:
+
+                        estado["vidas"] = 0
+                        estado["game_over"] = True
 
             # -----------------------------
             # TIRO X INIMIGO
             # -----------------------------
 
-            for tiro in tiros[:]:
+            for tiro in estado["tiros"][:]:
 
-                for inimigo in inimigos[:]:
+                for inimigo in estado["inimigos"][:]:
 
                     if tiro.rect.colliderect(inimigo.rect):
 
-                        if tiro in tiros:
-                            tiros.remove(tiro)
+                        if tiro in estado["tiros"]:
+                            estado["tiros"].remove(tiro)
 
-                        if inimigo in inimigos:
-                            inimigos.remove(inimigo)
+                        if inimigo in estado["inimigos"]:
+                            estado["inimigos"].remove(inimigo)
 
-                        pontuacao += 10
+                        estado["pontuacao"] += 10
 
-                        # 20% DE PROBABILIDADE DE DROP
                         if random.random() < 0.20:
-                            powerups.append(
+
+                            estado["powerups"].append(
                                 PowerUp(inimigo.x, inimigo.y)
                             )
 
@@ -314,102 +513,85 @@ if jogar:
             # JOGADOR X INIMIGO
             # -----------------------------
 
-            for inimigo in inimigos[:]:
+            for inimigo in estado["inimigos"][:]:
 
                 if jogador.rect.colliderect(inimigo.rect):
 
-                    inimigos.remove(inimigo)
+                    estado["inimigos"].remove(inimigo)
 
                     if not jogador.escudo_ativo:
-                        vidas -= 1
+                        estado["vidas"] -= 1
 
-                    if vidas <= 0:
-                        vidas = 0
-                        game_over = True
+                    if estado["vidas"] <= 0:
 
-            # =================================
+                        estado["vidas"] = 0
+                        estado["game_over"] = True
+
+            # -----------------------------
             # BOSS
-            # =================================
+            # -----------------------------
 
-            if boss_ativado and boss is not None:
+            boss = estado["boss"]
 
-                # -----------------------------
-                # MOVIMENTAR BOSS
-                # -----------------------------
+            if estado["boss_ativado"] and boss is not None:
 
-                boss.mover(bolhas)
+                boss.mover(estado["bolhas"])
 
-                # -----------------------------
-                # TIRO X ESCUDO DO BOSS
-                # -----------------------------
-
-                for tiro in tiros[:]:
+                # Tiros atingindo escudos
+                for tiro in estado["tiros"][:]:
 
                     if boss.tiro_bateu_no_escudo(tiro):
 
-                        if tiro in tiros:
-                            tiros.remove(tiro)
+                        estado["tiros"].remove(tiro)
 
-                # -----------------------------
-                # TIRO X BOSS
-                # -----------------------------
+                # Tiros atingindo o boss
+                for tiro in estado["tiros"][:]:
 
-                if boss is not None:
+                    if tiro.rect.colliderect(boss.rect):
 
-                    for tiro in tiros[:]:
+                        estado["tiros"].remove(tiro)
 
-                        if tiro.rect.colliderect(boss.rect):
+                        boss.vida -= 1
 
-                            if tiro in tiros:
-                                tiros.remove(tiro)
+                        if boss.vida <= 0:
 
-                            boss.vida -= 1
+                            boss.vida = 0
+                            estado["boss"] = None
+                            estado["vitoria"] = True
+                            break
 
-                            if boss.vida <= 0:
+                # Bolhas
+                if estado["boss"] is not None:
 
-                                boss.vida = 0
-                                boss = None
-                                vitoria = True
-                                break
-
-                # -----------------------------
-                # BOLHAS DO BOSS
-                # -----------------------------
-
-                if boss is not None:
-
-                    for bolha in bolhas[:]:
+                    for bolha in estado["bolhas"][:]:
 
                         bolha.mover()
 
                         if bolha.fora_da_tela(LARGURA, ALTURA):
 
-                            bolhas.remove(bolha)
+                            estado["bolhas"].remove(bolha)
                             continue
 
                         if bolha.rect.colliderect(jogador.rect):
 
-                            bolhas.remove(bolha)
+                            estado["bolhas"].remove(bolha)
 
                             if not jogador.escudo_ativo:
-                                vidas -= 1
+                                estado["vidas"] -= 1
 
-                            if vidas <= 0:
-                                vidas = 0
-                                game_over = True
+                            if estado["vidas"] <= 0:
 
-                # -----------------------------
-                # BOSS X JOGADOR
-                # -----------------------------
+                                estado["vidas"] = 0
+                                estado["game_over"] = True
 
-                if boss is not None:
+                # Boss x jogador
+                if estado["boss"] is not None:
 
-                    if jogador.rect.colliderect(boss.rect):
+                    if jogador.rect.colliderect(estado["boss"].rect):
 
                         if not jogador.escudo_ativo:
-                            vidas -= 1
+                            estado["vidas"] -= 1
 
-                        # Afastar a nave
                         jogador.x -= 30
 
                         if jogador.x < 0:
@@ -417,20 +599,34 @@ if jogar:
 
                         jogador.rect.x = int(jogador.x)
 
-                        if vidas <= 0:
-                            vidas = 0
-                            game_over = True
+                        if estado["vidas"] <= 0:
 
-        # =================================
-        # DESENHAR FUNDO
-        # =================================
+                            estado["vidas"] = 0
+                            estado["game_over"] = True
+
+        # =====================================
+        # SALVAR RESULTADO
+        # =====================================
+
+        if (
+            estado["game_over"]
+            or estado["vitoria"]
+            or estado["tempo_esgotado"]
+        ):
+
+            salvar_resultado(
+                estado,
+                login,
+                timer
+            )
+
+        # =====================================
+        # DESENHAR
+        # =====================================
 
         tela.fill(PRETO)
 
-        # -----------------------------
-        # ESTRELAS
-        # -----------------------------
-
+        # Estrelas
         for estrela in estrelas:
 
             pygame.draw.circle(
@@ -443,165 +639,89 @@ if jogar:
             estrela[1] += 1
 
             if estrela[1] > ALTURA:
+
                 estrela[1] = 0
                 estrela[0] = random.randint(0, LARGURA)
 
-        # -----------------------------
-        # JOGADOR
-        # -----------------------------
+        # Jogador
+        estado["jogador"].desenhar(tela)
 
-        jogador.desenhar(tela)
-
-        # -----------------------------
-        # TIROS
-        # -----------------------------
-
-        for tiro in tiros:
+        # Tiros
+        for tiro in estado["tiros"]:
             tiro.desenhar(tela)
 
-        # -----------------------------
-        # INIMIGOS
-        # -----------------------------
-
-        for inimigo in inimigos:
+        # Inimigos
+        for inimigo in estado["inimigos"]:
             inimigo.desenhar(tela)
 
-        # -----------------------------
-        # POWER-UPS
-        # -----------------------------
-
-        for item in powerups:
+        # Power-ups
+        for item in estado["powerups"]:
             item.desenhar(tela)
 
-        # -----------------------------
-        # BOLHAS
-        # -----------------------------
-
-        for bolha in bolhas:
+        # Bolhas
+        for bolha in estado["bolhas"]:
             bolha.desenhar(tela)
 
-        # -----------------------------
-        # BOSS
-        # -----------------------------
+        # Boss
+        if estado["boss"] is not None:
+            estado["boss"].desenhar(tela)
 
-        if boss is not None:
-            boss.desenhar(tela)
+        # HUD
+        desenhar_hud(estado, timer)
 
-        # =================================
-        # INTERFACE
-        # =================================
-
-        texto_pontos = fonte.render(
-            f"Pontuação: {pontuacao}",
-            True,
-            BRANCO
-        )
-
-        texto_vidas = fonte.render(
-            f"Vidas: {vidas}",
-            True,
-            BRANCO
-        )
-
-        tela.blit(texto_pontos, (20, 20))
-        tela.blit(texto_vidas, (850, 20))
-
-        # Mostrar efeitos ativos
-        agora = pygame.time.get_ticks()
-
-        if jogador.tiro_duplo_ativo:
-            texto_duplo = fonte.render(
-                "TIRO DUPLO",
-                True,
-                CIANO
-            )
-            tela.blit(texto_duplo, (20, 60))
-
-        if jogador.escudo_ativo:
-            texto_escudo = fonte.render(
-                "ESCUDO ATIVO",
-                True,
-                ROXO
-            )
-            tela.blit(texto_escudo, (20, 100))
-
-        # =================================
-        # GAME OVER
-        # =================================
-
-        if game_over:
-
-            texto = fonte_game_over.render(
-                "GAME OVER",
-                True,
-                VERMELHO
-            )
-
-            texto_reiniciar = fonte.render(
-                "Pressione R para reiniciar",
-                True,
-                BRANCO
-            )
-
-            tela.blit(
-                texto,
-                (
-                    LARGURA // 2 - texto.get_width() // 2,
-                    240
-                )
-            )
-
-            tela.blit(
-                texto_reiniciar,
-                (
-                    LARGURA // 2 - texto_reiniciar.get_width() // 2,
-                    330
-                )
-            )
-
-        # =================================
-        # VITÓRIA
-        # =================================
-
-        if vitoria:
-
-            texto = fonte_game_over.render(
-                "VOCÊ VENCEU!",
-                True,
-                VERDE
-            )
-
-            texto_reiniciar = fonte.render(
-                "Pressione R para jogar novamente",
-                True,
-                BRANCO
-            )
-
-            tela.blit(
-                texto,
-                (
-                    LARGURA // 2 - texto.get_width() // 2,
-                    240
-                )
-            )
-
-            tela.blit(
-                texto_reiniciar,
-                (
-                    LARGURA // 2 - texto_reiniciar.get_width() // 2,
-                    330
-                )
-            )
-
-        # =================================
-        # ATUALIZAR TELA
-        # =================================
+        # Resultado
+        desenhar_resultado(estado)
 
         pygame.display.flip()
 
+    return True
+
+
 # =========================================
-# ENCERRAR
+# PROGRAMA PRINCIPAL
 # =========================================
 
-pygame.quit()
-sys.exit()
+def main():
+
+    inicializar_banco()
+
+    login = realizar_login()
+
+    registrar_jogador(login)
+
+    while True:
+
+        jogar = menu(tela, clock)
+
+        if not jogar:
+            break
+
+        continuar = executar_jogo(login)
+
+        if not continuar:
+            break
+
+    pygame.quit()
+    sys.exit()
+
+
+# =========================================
+# EXECUÇÃO COM TRATAMENTO DE ERRO
+# =========================================
+
+if __name__ == "__main__":
+
+    try:
+
+        main()
+
+    except Exception:
+
+        traceback.print_exc()
+
+        input(
+            "\nOcorreu um erro. Pressione ENTER para fechar..."
+        )
+
+        pygame.quit()
+        sys.exit(1)
