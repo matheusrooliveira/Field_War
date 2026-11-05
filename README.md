@@ -176,16 +176,19 @@ The team uses GitHub for version control and Jira for task management, planning 
 
 ---
 
+---
+
+<h2 align="center">🚀 FIELD WAR</h2>
+
 <p align="center">
-  <img src="https://img.shields.io/badge/BUILT_WITH-Python-3776AB?style=flat-square&logo=python&logoColor=white" />
+  <strong>Survive the battlefield. Defeat the unknown. Become the legend.</strong>
 </p>
 
-<h3 align="center">🌠 FIELD WAR</h3>
-
 <p align="center">
-  <i>Survive the battlefield. Defeat the unknown. Become the legend.</i>
+  <img src="https://img.shields.io/badge/POWERED_BY-PYTHON-3776AB?style=for-the-badge&logo=python&logoColor=white" />
+  <img src="https://img.shields.io/badge/BUILT_WITH-PYGAME-00A86B?style=for-the-badge" />
 </p>
 
 <p align="center">
-  <b>GAME OVER IS NOT AN OPTION.</b>
+  <em>GAME OVER IS NOT AN OPTION.</em>
 </p>
