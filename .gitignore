@@ -1,5 +1,4 @@
-venv/
-database/
-__pycache__/venv/
-database/
-__pycache__/
+(echo venv/& echo database/& echo __pycache__/) > .gitignore
+git add .gitignore
+git commit -m "Corrige .gitignore"
+git push
