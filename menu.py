@@ -3,6 +3,7 @@ import pygame
 import random
 
 from sistemas.ranking import obter_ranking
+from audio import audio
 
 
 # -----------------------------------------
@@ -46,14 +47,18 @@ def tela_ranking(tela, clock):
             if evento.type == pygame.QUIT:
                 return False
 
+            audio.processar_evento(evento)
+
             if evento.type == pygame.KEYDOWN:
 
                 if evento.key == pygame.K_ESCAPE:
+                    audio.tocar("clique")
                     return True
 
             if evento.type == pygame.MOUSEBUTTONDOWN:
 
                 if botao_voltar.collidepoint(evento.pos):
+                    audio.tocar("clique")
                     return True
 
         # -----------------------------------------
@@ -261,6 +266,8 @@ def menu(tela, clock):
     fonte_titulo = pygame.font.Font(None, 100)
     fonte_botao = pygame.font.Font(None, 50)
     fonte_pequena = pygame.font.Font(None, 28)
+
+    audio.musica("menu")
 
     # -----------------------------------------
     # ESTRELAS
@@ -472,15 +479,21 @@ def menu(tela, clock):
 
                 return False
 
+            audio.processar_evento(evento)
+
             if evento.type == pygame.MOUSEBUTTONDOWN:
 
                 # JOGAR
                 if botao_jogar.collidepoint(evento.pos):
 
+                    audio.tocar("clique")
+
                     return True
 
                 # RANKING
                 if botao_ranking.collidepoint(evento.pos):
+
+                    audio.tocar("clique")
 
                     continuar = tela_ranking(
                         tela,
@@ -492,6 +505,8 @@ def menu(tela, clock):
 
                 # SAIR
                 if botao_sair.collidepoint(evento.pos):
+
+                    audio.tocar("clique")
 
                     return False
 

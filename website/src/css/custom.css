@@ -1,0 +1,108 @@
+/* Tema "espaço profundo" inspirado nas cores do jogo (ciano sobre azul-noite). */
+
+:root {
+  --ifm-color-primary: #0089b3;
+  --ifm-color-primary-dark: #007ca1;
+  --ifm-color-primary-darker: #00769a;
+  --ifm-color-primary-darkest: #006180;
+  --ifm-color-primary-light: #0096c4;
+  --ifm-color-primary-lighter: #009bcb;
+  --ifm-color-primary-lightest: #00b1e8;
+  --ifm-code-font-size: 92%;
+  --ifm-font-family-base: 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+  --ifm-heading-font-weight: 700;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme='dark'] {
+  --ifm-color-primary: #00c8ff;
+  --ifm-color-primary-dark: #00b4e6;
+  --ifm-color-primary-darker: #00aadb;
+  --ifm-color-primary-darkest: #008cb3;
+  --ifm-color-primary-light: #26d0ff;
+  --ifm-color-primary-lighter: #33d3ff;
+  --ifm-color-primary-lightest: #66deff;
+  --ifm-background-color: #050814;
+  --ifm-background-surface-color: #0a1024;
+  --ifm-navbar-background-color: #050814;
+  --ifm-footer-background-color: #03050d;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 200, 255, 0.12);
+}
+
+.navbar__title {
+  letter-spacing: 0.12em;
+  font-weight: 800;
+}
+
+.navbar__logo img {
+  image-rendering: auto;
+}
+
+[data-theme='dark'] .navbar {
+  border-bottom: 1px solid rgba(0, 200, 255, 0.18);
+  box-shadow: none;
+}
+
+[data-theme='dark'] .menu__link--active:not(.menu__link--sublist) {
+  background: rgba(0, 200, 255, 0.1);
+}
+
+[data-theme='dark'] table {
+  --ifm-table-background: transparent;
+  --ifm-table-stripe-background: rgba(0, 200, 255, 0.04);
+  --ifm-table-border-color: rgba(0, 200, 255, 0.18);
+}
+
+kbd {
+  background: var(--ifm-background-surface-color);
+  border: 1px solid var(--ifm-color-emphasis-400);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 1px 7px;
+  font-size: 0.85em;
+}
+
+.audio-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+}
+
+.audio-row span {
+  min-width: 11rem;
+  font-weight: 600;
+}
+
+.audio-row audio {
+  flex: 1;
+  min-width: 220px;
+  height: 36px;
+}
+
+.sprite-row {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  margin: 1rem 0 1.5rem;
+}
+
+.sprite-row figure {
+  margin: 0;
+  text-align: center;
+}
+
+.sprite-row img {
+  height: 120px;
+  width: auto;
+  object-fit: contain;
+}
+
+.sprite-row figcaption {
+  font-size: 0.85rem;
+  opacity: 0.75;
+  margin-top: 0.4rem;
+}

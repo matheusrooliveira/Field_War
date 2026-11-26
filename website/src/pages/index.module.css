@@ -1,0 +1,65 @@
+.hero {
+  text-align: center;
+  padding: 3rem 0 2.5rem;
+  background: radial-gradient(ellipse at top, rgba(0, 200, 255, 0.14), transparent 65%);
+}
+
+.banner {
+  max-width: 760px;
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 200, 255, 0.25);
+  margin-bottom: 1.5rem;
+}
+
+.titulo {
+  font-size: 3.2rem;
+  letter-spacing: 0.25em;
+  margin-bottom: 0.25rem;
+}
+
+.tagline {
+  font-size: 1.25rem;
+  opacity: 0.8;
+}
+
+.botoes {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 1.5rem;
+}
+
+.card {
+  display: block;
+  height: 100%;
+  padding: 1.25rem;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 10px;
+  color: inherit;
+  transition: border-color 0.15s, transform 0.15s;
+}
+
+.card:hover {
+  border-color: var(--ifm-color-primary);
+  transform: translateY(-2px);
+  text-decoration: none;
+  color: inherit;
+}
+
+.card h3 {
+  color: var(--ifm-color-primary);
+  margin-bottom: 0.5rem;
+}
+
+.card p {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+@media (max-width: 996px) {
+  .titulo {
+    font-size: 2.2rem;
+  }
+}

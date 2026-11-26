@@ -18,6 +18,7 @@ from sistemas.ranking import (
     salvar_recorde
 )
 from sistemas.timer import Timer
+from audio import audio
 
 
 # =========================================
@@ -25,6 +26,7 @@ from sistemas.timer import Timer
 # =========================================
 
 pygame.init()
+audio.iniciar()
 
 LARGURA = 1000
 ALTURA = 600
@@ -43,6 +45,7 @@ ROXO = (190, 80, 255)
 
 fonte = pygame.font.Font(None, 36)
 fonte_game_over = pygame.font.Font(None, 70)
+fonte_pequena = pygame.font.Font(None, 24)
 
 
 # =========================================
@@ -52,6 +55,8 @@ fonte_game_over = pygame.font.Font(None, 70)
 def realizar_login():
 
     login_tela = TelaLogin()
+
+    audio.musica("menu")
 
     fonte_titulo = pygame.font.Font(None, 60)
     fonte_texto = pygame.font.Font(None, 36)
@@ -79,6 +84,18 @@ def realizar_login():
 
         pygame.display.flip()
         clock.tick(60)
+
+
+# =========================================
+# SOM DE DANO
+# =========================================
+
+def som_dano(jogador):
+
+    if jogador.escudo_ativo:
+        audio.tocar("escudo_hit")
+    else:
+        audio.tocar("dano")
 
 
 # =========================================
@@ -255,6 +272,13 @@ def salvar_resultado(estado, login, timer):
     if estado["recorde_salvo"]:
         return
 
+    audio.parar_musica()
+
+    if estado["vitoria"]:
+        audio.tocar("vitoria")
+    else:
+        audio.tocar("game_over")
+
     if estado["vitoria"]:
         resultado = "vitoria"
 
@@ -284,6 +308,8 @@ def executar_jogo(login):
 
     estado = reiniciar_jogo()
 
+    audio.musica("jogo")
+
     timer = Timer(300)
     timer.iniciar()
 
@@ -311,6 +337,8 @@ def executar_jogo(login):
 
             if evento.type == pygame.QUIT:
                 return False
+
+            audio.processar_evento(evento)
 
             if evento.type == pygame.KEYDOWN:
 
@@ -343,6 +371,8 @@ def executar_jogo(login):
                                 Bullet(x_tiro, jogador.y)
                             )
 
+                        audio.tocar("tiro")
+
                 if evento.key == pygame.K_r:
 
                     if (
@@ -353,6 +383,7 @@ def executar_jogo(login):
 
                         estado = reiniciar_jogo()
                         timer.reiniciar()
+                        audio.musica("jogo")
 
                 if evento.key == pygame.K_ESCAPE:
                     return False
@@ -414,6 +445,13 @@ def executar_jogo(login):
 
                         jogador.ativar_powerup("escudo")
 
+                    if item.tipo == "vida":
+                        audio.tocar("vida")
+                    elif item.tipo == "escudo":
+                        audio.tocar("escudo")
+                    else:
+                        audio.tocar("powerup")
+
                     estado["powerups"].remove(item)
 
             # -----------------------------
@@ -449,6 +487,9 @@ def executar_jogo(login):
 
                 print("BOSS DESBLOQUEADO!")
 
+                audio.musica("boss")
+                audio.tocar("boss_entra")
+
             # -----------------------------
             # CRIAR INIMIGOS
             # -----------------------------
@@ -477,6 +518,7 @@ def executar_jogo(login):
 
                     estado["inimigos"].remove(inimigo)
                     estado["vidas"] -= 1
+                    audio.tocar("dano")
 
                     if estado["vidas"] <= 0:
 
@@ -500,6 +542,7 @@ def executar_jogo(login):
                             estado["inimigos"].remove(inimigo)
 
                         estado["pontuacao"] += 10
+                        audio.tocar("explosao")
 
                         if random.random() < 0.20:
 
@@ -519,6 +562,8 @@ def executar_jogo(login):
 
                     estado["inimigos"].remove(inimigo)
 
+                    som_dano(jogador)
+
                     if not jogador.escudo_ativo:
                         estado["vidas"] -= 1
 
@@ -535,7 +580,12 @@ def executar_jogo(login):
 
             if estado["boss_ativado"] and boss is not None:
 
+                bolhas_antes = len(estado["bolhas"])
+
                 boss.mover(estado["bolhas"])
+
+                if len(estado["bolhas"]) > bolhas_antes:
+                    audio.tocar("boss_tiro")
 
                 # Tiros atingindo escudos
                 for tiro in estado["tiros"][:]:
@@ -543,6 +593,7 @@ def executar_jogo(login):
                     if boss.tiro_bateu_no_escudo(tiro):
 
                         estado["tiros"].remove(tiro)
+                        audio.tocar("escudo_hit")
 
                 # Tiros atingindo o boss
                 for tiro in estado["tiros"][:]:
@@ -552,10 +603,12 @@ def executar_jogo(login):
                         estado["tiros"].remove(tiro)
 
                         boss.vida -= 1
+                        audio.tocar("boss_hit")
 
                         if boss.vida <= 0:
 
                             boss.vida = 0
+                            audio.tocar("boss_derrotado")
                             estado["boss"] = None
                             estado["vitoria"] = True
                             break
@@ -576,6 +629,8 @@ def executar_jogo(login):
 
                             estado["bolhas"].remove(bolha)
 
+                            som_dano(jogador)
+
                             if not jogador.escudo_ativo:
                                 estado["vidas"] -= 1
 
@@ -588,6 +643,8 @@ def executar_jogo(login):
                 if estado["boss"] is not None:
 
                     if jogador.rect.colliderect(estado["boss"].rect):
+
+                        som_dano(jogador)
 
                         if not jogador.escudo_ativo:
                             estado["vidas"] -= 1
@@ -668,6 +725,15 @@ def executar_jogo(login):
 
         # HUD
         desenhar_hud(estado, timer)
+
+        # Estado do som (tecla M)
+        texto_som = fonte_pequena.render(
+            audio.texto_status(),
+            True,
+            (150, 150, 170)
+        )
+
+        tela.blit(texto_som, (20, ALTURA - 30))
 
         # Resultado
         desenhar_resultado(estado)

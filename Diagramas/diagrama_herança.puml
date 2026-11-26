@@ -1,0 +1,88 @@
+@startuml
+title Hierarquia de Herança - FIELD WAR
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam classBackgroundColor #F8F9FF
+skinparam ArrowColor #333333
+
+abstract class EntidadeJogo {
+  # x : float
+  # y : float
+  # rect : pygame.Rect
+  + {abstract} mover()
+  + {abstract} desenhar(tela)
+}
+
+abstract class EntidadeComImagem {
+  # largura : int
+  # altura : int
+  # imagem : pygame.Surface
+  # velocidade : int
+  + desenhar(tela)
+}
+
+abstract class Projetil {
+  # velocidade : float
+  + fora_da_tela(largura, altura) : bool
+}
+
+class Player {
+  - largura_tela : int
+  - altura_tela : int
+  - tiro_duplo_ate : int
+  - escudo_ate : int
+  + mover()
+  + ativar_powerup(tipo)
+  + tiro_duplo_ativo() : bool
+  + escudo_ativo() : bool
+}
+
+class Enemy {
+  + mover()
+}
+
+class Boss {
+  - vida : int
+  - vida_maxima : int
+  - fase : int
+  + mover(bolhas)
+  + criar_bolha() : Bolha
+  + tiro_bateu_no_escudo(tiro) : bool
+  + desenhar_escudos(tela)
+  + desenhar_vida(tela)
+}
+
+class Bullet {
+  + mover()
+  + desenhar(tela)
+}
+
+class Bolha {
+  - raio : int
+  - vel_x : float
+  - vel_y : float
+  + mover()
+  + desenhar(tela)
+}
+
+class PowerUp {
+  - tipo : str
+  - tamanho : int
+  + mover()
+  + desenhar(tela)
+}
+
+EntidadeJogo <|-- EntidadeComImagem
+EntidadeJogo <|-- Projetil
+EntidadeJogo <|-- PowerUp
+EntidadeComImagem <|-- Player
+EntidadeComImagem <|-- Enemy
+EntidadeComImagem <|-- Boss
+Projetil <|-- Bullet
+Projetil <|-- Bolha
+
+note right of EntidadeJogo
+  Classe base: tudo que existe
+  na tela e se move.
+end note
+@enduml

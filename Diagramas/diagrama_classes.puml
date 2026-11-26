@@ -1,0 +1,89 @@
+@startuml
+title Diagrama de Classes - FIELD WAR
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam classBackgroundColor #F8F9FF
+skinparam ArrowColor #333333
+
+abstract class EntidadeJogo {
+  # x : float
+  # y : float
+  # largura : int
+  # altura : int
+  # rect : pygame.Rect
+  + {abstract} mover()
+  + {abstract} desenhar(tela)
+}
+
+abstract class EntidadeComImagem {
+  # imagem : pygame.Surface
+  # velocidade : int
+  + desenhar(tela)
+}
+
+abstract class Projetil {
+  # velocidade : float
+  + {abstract} mover()
+  + fora_da_tela(largura, altura) : bool
+}
+
+class Player {
+  - largura_tela : int
+  - altura_tela : int
+  + mover()
+  + desenhar(tela)
+}
+
+class Enemy {
+  + mover()
+  + desenhar(tela)
+}
+
+class Boss {
+  - largura_tela : int
+  - altura_tela : int
+  - jogador : Player
+  - vida_maxima : int
+  - vida : int
+  - fase : int
+  - direcao : int
+  - timer_ataque : int
+  - angulo_escudo : float
+  - raio_orbita : int
+  - raio_escudo : int
+  - pos_escudos : list
+  - raio_atracao : int
+  + mover(bolhas)
+  + atracao_magnetica()
+  + criar_bolha() : Bolha
+  + atualizar_escudos()
+  + tiro_bateu_no_escudo(tiro) : bool
+  + desenhar(tela)
+  + desenhar_escudos(tela)
+  + desenhar_vida(tela)
+}
+
+class Bullet {
+  + mover()
+  + desenhar(tela)
+}
+
+class Bolha {
+  - raio : int
+  - vel_x : float
+  - vel_y : float
+  + mover()
+  + desenhar(tela)
+}
+
+EntidadeJogo <|-- EntidadeComImagem
+EntidadeJogo <|-- Projetil
+EntidadeComImagem <|-- Player
+EntidadeComImagem <|-- Enemy
+EntidadeComImagem <|-- Boss
+Projetil <|-- Bullet
+Projetil <|-- Bolha
+
+Boss --> "1" Player : jogador
+Boss ..> Bolha : <<cria>>
+@enduml
